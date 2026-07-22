@@ -1,0 +1,98 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dizzaract}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-dizzaract}
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-dizzaract}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    # Deliberately no volume: the leaderboard ZSET is a disposable cache
+    # rebuilt from Postgres (the source of truth) on boot / cache-miss, so
+    # this setup proves Redis can be wiped without losing standings.
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-dizzaract}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-dizzaract}
+    command:
+      [
+        'node',
+        './node_modules/typeorm/cli.js',
+        'migration:run',
+        '-d',
+        'dist/database/data-source.js',
+      ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  api1:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-dizzaract}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-dizzaract}
+      REDIS_URL: redis://redis:6379
+    # Exposed directly (in addition to going through nginx) purely so the
+    # demo script can connect to each replica individually and prove
+    # cross-instance fan-out unambiguously, rather than relying on nginx's
+    # round-robin picking different replicas by chance.
+    ports:
+      - '3001:3000'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  api2:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-dizzaract}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-dizzaract}
+      REDIS_URL: redis://redis:6379
+    ports:
+      - '3002:3000'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - '8080:80'
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api1
+      - api2
+
+volumes:
+  postgres_data:
