@@ -51,12 +51,16 @@ fi
 OUT1=$(mktemp)
 OUT2=$(mktemp)
 
+# -n/--no-close: without it, websocat sends a WS close frame as soon as its
+# stdin hits EOF - which happens immediately in non-interactive shells (CI,
+# `bash demo.sh < /dev/null`), closing the connection before any broadcast
+# can arrive.
 echo "==> Connecting to api1 directly ($API1_WS)"
-websocat "$API1_WS/ws/leaderboard/$GAME_ID?token=$ACCESS_TOKEN" > "$OUT1" 2>&1 &
+websocat -n "$API1_WS/ws/leaderboard/$GAME_ID?token=$ACCESS_TOKEN" > "$OUT1" 2>&1 &
 WS1_PID=$!
 
 echo "==> Connecting to api2 directly ($API2_WS)"
-websocat "$API2_WS/ws/leaderboard/$GAME_ID?token=$ACCESS_TOKEN" > "$OUT2" 2>&1 &
+websocat -n "$API2_WS/ws/leaderboard/$GAME_ID?token=$ACCESS_TOKEN" > "$OUT2" 2>&1 &
 WS2_PID=$!
 
 sleep 1
