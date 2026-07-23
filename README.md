@@ -8,6 +8,18 @@ across multiple app instances, not just within one process.
 See [`NOTES.md`](./NOTES.md) for the architecture write-up, design
 decisions, and self-critique.
 
+## Docs & diagrams
+
+| File | What's in it |
+|---|---|
+| [`NOTES.md`](./NOTES.md) | Architecture write-up, design decisions, self-critique |
+| [`docs/diagram-requirements.md`](./docs/diagram-requirements.md) | The diagram brief the files below were built against |
+| [`docs/diagrams/01-system-architecture.md`](./docs/diagrams/01-system-architecture.md) | Runtime components - client entry points, NestJS boundary, REST/WS surfaces, DB storage, async processing - annotated with the AWS-equivalent for each |
+| [`docs/diagrams/02-rest-data-flow.md`](./docs/diagrams/02-rest-data-flow.md) | Zoomed sequence flow for match submit and leaderboard retrieval |
+| [`docs/diagrams/03-websocket-data-flow.md`](./docs/diagrams/03-websocket-data-flow.md) | Zoomed sequence flow for WS connect/auth and cross-instance Redis fan-out |
+| [`docs/diagrams/04-polling-monitoring-data-flow.md`](./docs/diagrams/04-polling-monitoring-data-flow.md) | Zoomed flow for cache rehydration and health-check polling |
+| [`docs/production-gaps.md`](./docs/production-gaps.md) | What's missing between this repo and a real AWS production deployment |
+
 ## Stack
 
 TypeScript, NestJS, PostgreSQL (TypeORM migrations), Redis (Sorted Sets +
