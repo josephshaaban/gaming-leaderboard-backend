@@ -123,11 +123,13 @@ and *bonus* item is skipped in favor of a solid, well-tested core:
   `User` but isn't enforced anywhere), OAuth2, cursor-based pagination,
   per-player score history, presence events, Redis-token-bucket rate
   limiting.
-- **Bonuses skipped (all of them - zero picked)**: load test, Prometheus
-  `/metrics`, Terraform snippet, message dedupe via client-supplied
-  `match_id`. Time was reinvested into resilience (try/catch around every
-  Redis call), the rehydration-on-miss mechanism, and the cross-instance
-  fan-out test instead.
+- **Bonuses**: per "pick at most one," the **Terraform snippet** is the one
+  picked - VPC + RDS Postgres + ElastiCache Redis + Secrets Manager, no
+  `apply` run (see [`terraform/README.md`](./terraform/README.md)). Still
+  skipped: load test, Prometheus `/metrics`, message dedupe via
+  client-supplied `match_id`. Time was otherwise reinvested into resilience
+  (try/catch around every Redis call), the rehydration-on-miss mechanism,
+  and the cross-instance fan-out test.
 
 ## Self-critique / what's next
 

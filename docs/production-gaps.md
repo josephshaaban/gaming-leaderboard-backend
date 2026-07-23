@@ -83,9 +83,11 @@ repo or a genuine risk if deployed as-is.
 - `.github/workflows/ci.yml` builds and tests the Docker image but doesn't
   publish or deploy it - no ECR push step, no ECS deploy step. Getting from
   a green CI run to a running AWS environment is entirely manual today.
-- No infrastructure-as-code exists (Terraform/CDK was an optional bonus,
-  explicitly skipped) - the AWS column in the architecture diagram is a
-  target, not provisioned infrastructure.
+- A Terraform snippet for the data + networking layer exists
+  (`../terraform/`) but has never been applied - no remote state, no CI
+  wiring, and no compute (ECS/ALB) coverage, by design (see
+  `terraform/README.md`). The AWS column in the architecture diagram
+  remains a target, not provisioned infrastructure.
 - The one-shot `migrate` Compose service relies on
   `depends_on: service_completed_successfully`, a Compose-only primitive.
   ECS has no equivalent - production needs an explicit one-shot migration

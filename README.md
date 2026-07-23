@@ -20,6 +20,7 @@ decisions, and self-critique.
 | [`docs/diagrams/04-polling-monitoring-data-flow.md`](./docs/diagrams/04-polling-monitoring-data-flow.md) | Zoomed flow for cache rehydration and health-check polling |
 | [`docs/production-gaps.md`](./docs/production-gaps.md) | What's missing between this repo and a real AWS production deployment |
 | [`docs/demo-run-output.txt`](./docs/demo-run-output.txt) | Raw terminal output of a real `demo.sh` run - replica fan-out evidence |
+| [`terraform/`](./terraform) | Terraform snippet (bonus, not applied) - VPC + RDS Postgres + ElastiCache Redis + Secrets Manager |
 
 ## Stack
 
@@ -114,11 +115,13 @@ summary mapping:
 | Docker healthcheck polling `GET /health` | ALB target-group health check + CloudWatch alarm on unhealthy-host count |
 | `.env` file | Secrets Manager / SSM Parameter Store, injected into the task definition |
 
-None of this is provisioned - there's no Terraform/CDK in this repo (that
-was an optional bonus, explicitly skipped, see NOTES.md). See
+None of this is provisioned. A Terraform snippet for the data + networking
+layer (VPC, RDS, ElastiCache, Secrets Manager) lives in
+[`terraform/`](./terraform) - see [`terraform/README.md`](./terraform/README.md)
+for scope and how to validate it without an AWS account. See
 [`docs/production-gaps.md`](./docs/production-gaps.md) for the concrete list
-of what's missing to actually get from this table to a running AWS
-deployment.
+of what's still missing to actually get from this table to a running AWS
+deployment (the compute layer, CI/CD wiring, and more).
 
 ## Data governance notes
 
