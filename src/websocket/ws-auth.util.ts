@@ -19,11 +19,12 @@ export interface WsUpgradeContext {
 }
 
 /**
- * Authenticates a WebSocket upgrade request BEFORE any WS handshake frame is
- * sent back. The token travels as a `?token=` query param (see NOTES.md for
- * the justification vs. subprotocol / first-message alternatives) so an
- * invalid or expired JWT can be rejected with a plain HTTP status and
- * `socket.destroy()`, never accept-then-close.
+ * Authenticates a WebSocket upgrade request. The token travels as a
+ * `?token=` query param (see NOTES.md for the justification vs. subprotocol
+ * / first-message alternatives). The caller (`attach-ws-server.ts`) turns a
+ * thrown `WsAuthError` into a completed handshake immediately followed by a
+ * WS close frame with an application-specific code (4401/4404), rather than
+ * ever delivering a snapshot or registering the connection.
  */
 export async function authenticateUpgrade(
   req: IncomingMessage,

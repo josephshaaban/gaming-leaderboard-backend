@@ -40,9 +40,15 @@ accidentally reintroduce in-process-only broadcast.
 
 Token passed as a **query parameter** (`?token=<accessJWT>`) on the
 `WS /ws/leaderboard/:gameId` upgrade request, verified in
-`ws-auth.util.ts` before the WS handshake completes. An invalid/expired
-token or unknown `gameId` gets a plain HTTP 401/404 response and
-`socket.destroy()` - never accept-then-close.
+`ws-auth.util.ts`. An invalid/expired token or unknown `gameId` completes
+the WS opening handshake (a close frame can only be sent from the `OPEN`
+state - there is no way to emit one without it) and is then immediately
+closed with an application-specific WS close code - `4401` for missing/
+invalid/expired token, `4404` for an unknown WS path or unknown `gameId` -
+before ever being registered with the connection registry or sent a
+snapshot. This satisfies "reject invalid/expired JWT with a correct WS
+close code" literally, rather than only rejecting at the HTTP-upgrade
+layer with a plain status code.
 
 Considered alternatives:
 - **Subprotocol** (`Sec-WebSocket-Protocol`): avoids the token appearing in

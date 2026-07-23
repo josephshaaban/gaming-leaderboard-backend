@@ -2,12 +2,17 @@ import { HttpException, INestApplication, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { IncomingMessage, Server } from 'node:http';
 import type { Socket } from 'node:net';
-import { WebSocketServer } from 'ws';
+import { WebSocket, WebSocketServer } from 'ws';
 import { authenticateUpgrade, WsAuthError } from './ws-auth.util';
 import { ConnectionRegistry } from './connection-registry';
 import { LeaderboardService } from '../leaderboard/leaderboard.service';
 import { GamesService } from '../games/games.service';
-import { SnapshotMessage } from './protocol';
+import {
+  SnapshotMessage,
+  WS_CLOSE_INTERNAL_ERROR,
+  WS_CLOSE_NOT_FOUND,
+  WS_CLOSE_UNAUTHORIZED,
+} from './protocol';
 
 const TOP_N_ON_CONNECT = 10;
 
@@ -15,8 +20,12 @@ const TOP_N_ON_CONNECT = 10;
  * Attaches a raw `ws` server to the Nest HTTP server's `upgrade` event,
  * handling `WS /ws/leaderboard/:gameId`. A manual upgrade handler (rather
  * than a `@nestjs/websockets` gateway) is used because the route needs a
- * dynamic path segment and pre-handshake JWT rejection with a plain HTTP
- * status - see NOTES.md for the full justification.
+ * dynamic path segment - see NOTES.md for the full justification.
+ *
+ * Auth/lookup failures still complete the WS opening handshake (a close
+ * frame can only be sent from the OPEN state) and are then immediately
+ * closed with an application-specific code (4401/4404) - never registered
+ * with the connection registry, never sent a snapshot.
  */
 export function attachWebSocketServer(
   app: INestApplication,
@@ -35,27 +44,36 @@ export function attachWebSocketServer(
     (req: IncomingMessage, socket: Socket, head: Buffer) => {
       authenticateUpgrade(req, jwtService)
         .then(async ({ gameId }) => {
-          await gamesService.findByIdOrThrow(gameId);
+          try {
+            await gamesService.findByIdOrThrow(gameId);
+          } catch {
+            closeWithCode(
+              wss,
+              req,
+              socket,
+              head,
+              WS_CLOSE_NOT_FOUND,
+              'Unknown gameId',
+            );
+            return;
+          }
           wss.handleUpgrade(req, socket, head, (ws) => {
             registry.register(gameId, ws);
             void sendInitialSnapshot(leaderboardService, logger, gameId, ws);
           });
         })
         .catch((err: unknown) => {
-          const status =
-            err instanceof WsAuthError
-              ? err.httpStatus
-              : err instanceof HttpException
-                ? err.getStatus()
-                : 500;
+          const code =
+            err instanceof WsAuthError && err.httpStatus === 404
+              ? WS_CLOSE_NOT_FOUND
+              : err instanceof WsAuthError
+                ? WS_CLOSE_UNAUTHORIZED
+                : WS_CLOSE_INTERNAL_ERROR;
           const reason =
             err instanceof WsAuthError || err instanceof HttpException
               ? err.message
               : 'Internal error';
-          socket.write(
-            `HTTP/1.1 ${status} ${reason}\r\nConnection: close\r\n\r\n`,
-          );
-          socket.destroy();
+          closeWithCode(wss, req, socket, head, code, reason);
         });
     },
   );
@@ -64,6 +82,24 @@ export function attachWebSocketServer(
   logger.log('WebSocket upgrade handler attached at /ws/leaderboard/:gameId');
 
   return registry;
+}
+
+/**
+ * Completes the WS opening handshake purely so a real close frame can be
+ * sent, then immediately closes with `code`/`reason` - the connection is
+ * never registered and never receives a snapshot.
+ */
+function closeWithCode(
+  wss: WebSocketServer,
+  req: IncomingMessage,
+  socket: Socket,
+  head: Buffer,
+  code: number,
+  reason: string,
+): void {
+  wss.handleUpgrade(req, socket, head, (ws: WebSocket) => {
+    ws.close(code, reason);
+  });
 }
 
 async function sendInitialSnapshot(
