@@ -19,6 +19,7 @@ decisions, and self-critique.
 | [`docs/diagrams/03-websocket-data-flow.md`](./docs/diagrams/03-websocket-data-flow.md) | Zoomed sequence flow for WS connect/auth and cross-instance Redis fan-out |
 | [`docs/diagrams/04-polling-monitoring-data-flow.md`](./docs/diagrams/04-polling-monitoring-data-flow.md) | Zoomed flow for cache rehydration and health-check polling |
 | [`docs/production-gaps.md`](./docs/production-gaps.md) | What's missing between this repo and a real AWS production deployment |
+| [`docs/demo-run-output.txt`](./docs/demo-run-output.txt) | Raw terminal output of a real `demo.sh` run - replica fan-out evidence |
 
 ## Stack
 

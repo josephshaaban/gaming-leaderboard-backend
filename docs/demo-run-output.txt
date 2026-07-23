@@ -1,0 +1,22 @@
+youss@yosh MINGW64 ~/source/repos/dizzaract (master)
+$ ./demo.sh
+==> Signing up as demo-1784842708@example.com
+    got access token: eyJhbGciOiJIUzI1NiIs...
+==> Creating a game
+    gameId: b06d4bda-2e88-48b4-97f2-2f062bda8e94
+==> Connecting to api1 directly (ws://localhost:3001)
+==> Connecting to api2 directly (ws://localhost:3002)
+==> Submitting a match (score=100) via nginx
+
+==> Messages received by the client connected to api1:
+{"type":"snapshot","gameId":"b06d4bda-2e88-48b4-97f2-2f062bda8e94","entries":[],"generatedAt":"2026-07-23T21:38:28.913Z"}
+{"type":"rank_update","gameId":"b06d4bda-2e88-48b4-97f2-2f062bda8e94","matchId":"c387922a-8013-49a5-8285-0dbdc40eeffd","player":{"playerId":"1441eb6f-37ba-402f-a7ff-1e8de13e47a7"},"previousRank":null,"newRank":1,"previousScore":0,"newScore":100,"delta":100,"top":[{"playerId":"1441eb6f-37ba-402f-a7ff-1e8de13e47a7","score":100,"rank":1}],"ts":"2026-07-23T21:38:30.028Z"}
+
+==> Messages received by the client connected to api2:
+{"type":"snapshot","gameId":"b06d4bda-2e88-48b4-97f2-2f062bda8e94","entries":[],"generatedAt":"2026-07-23T21:38:28.923Z"}
+{"type":"rank_update","gameId":"b06d4bda-2e88-48b4-97f2-2f062bda8e94","matchId":"c387922a-8013-49a5-8285-0dbdc40eeffd","player":{"playerId":"1441eb6f-37ba-402f-a7ff-1e8de13e47a7"},"previousRank":null,"newRank":1,"previousScore":0,"newScore":100,"delta":100,"top":[{"playerId":"1441eb6f-37ba-402f-a7ff-1e8de13e47a7","score":100,"rank":1}],"ts":"2026-07-23T21:38:30.028Z"}
+
+If both show a 'snapshot' followed by a 'rank_update' for matchId
+above, the match submitted through nginx (which could have landed on
+either replica) fanned out via Redis pub/sub to BOTH replicas' local
+WebSocket connections - the core requirement of this assignment.
